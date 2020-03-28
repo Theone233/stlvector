@@ -1,0 +1,292 @@
+#ifndef SJTU_VECTOR_HPP
+#define SJTU_VECTOR_HPP
+
+#include "exceptions.hpp"
+
+#include <climits>
+#include <cstddef>
+
+namespace sjtu {
+
+    template<typename T>
+    class vector {
+        T* head;
+        size_t ssize = 1;
+        size_t csize = 0;
+        void doublespace() {
+            T* p, * q;
+            p = head;
+            ssize *= 2;
+            q = (T*)operator new[](ssize); 
+            head = q;
+            for (size_t i = 0; i < csize; ++i) { new(head + i) T(p[i]); }
+            for (size_t i = 0; i < csize; ++i)  p[i].~T();
+            delete[]p; 
+        }
+    public:
+        class const_iterator;
+        class iterator {
+            friend vector;
+            friend const_iterator;
+        private:
+            vector* pos;
+            size_t key;
+        public:
+            iterator(vector* obj, size_t dir):pos(obj),key(dir) {}
+            iterator(const iterator& other) :pos(other.pos),key(other.key){}
+            iterator operator+(const int& n) const {
+                iterator x(pos , key+n);
+                return x;
+            }
+            iterator operator-(const int& n) const {
+                iterator x(pos ,key - n);
+                return x;
+            }
+
+            int operator-(const iterator& rhs) const {
+                return key - rhs.key;
+            }
+            iterator& operator+=(const int& n) {
+                key += n;
+                return *this;
+            }
+            iterator& operator-=(const int& n) {
+                key -= n;
+                return *this;
+            }
+
+            iterator operator++(int) {
+                iterator x(pos ,key);
+                key++;
+                return x;
+            }
+
+            iterator& operator++() {
+                key += 1;
+                return *this;
+            }
+
+            iterator operator--(int) {
+                iterator x(pos,key);
+                key--;
+                return x;
+            }
+
+            iterator& operator--() {
+                key--;
+                return *this;
+            }
+
+            T& operator*() const {
+                return pos->head[key];
+            }
+
+            bool operator==(const iterator& rhs) const {
+                return pos == rhs.pos && key = rhs.key;
+            }
+            bool operator==(const const_iterator& rhs) const {
+                return pos == rhs.pos && key = rhs.key;
+            }
+
+            bool operator!=(const iterator& rhs) const {
+                return pos != rhs.pos || key != rhs.key;
+            }
+            bool operator!=(const const_iterator& rhs) const {
+                return pos != rhs.pos || key != rhs.key;
+            }
+        };
+
+        class const_iterator {
+            friend vector;
+            friend iterator;
+        private:
+            const vector* pos;
+            size_t key;
+        public:
+            const_iterator(vector*obj , size_t dir) :pos(obj),key(dir) {};
+            const_iterator operator+(const int& n) const {
+                const_iterator x(pos ,key + n);
+                return x;
+            }
+            iterator operator-(const int& n) const {
+                iterator x(pos,key - n);
+                return x;
+            }
+            const_iterator operator++(int) {
+                const_iterator x(pos ,key);
+                key++;
+                return x;
+            }
+
+            const_iterator& operator++() {
+                key += 1;
+                return *this;
+            }
+
+            const_iterator operator--(int) {
+                const_iterator x(pos,key);
+                key--;
+                return x;
+            }
+
+            const_iterator& operator--() {
+                key--;
+                return *this;
+            }
+
+            int operator-(const const_iterator& rhs) const {
+                return key - rhs.key;
+            }
+
+            T& operator*() const {
+                return pos->head[key];
+            }
+
+            bool operator==(const iterator& rhs) const {
+                return pos == rhs.pos && key = rhs.key;
+            }
+            bool operator==(const const_iterator& rhs) const {
+                return pos == rhs.pos && key = rhs.key;
+            }
+
+            bool operator!=(const iterator& rhs) const {
+                return pos != rhs.pos || key != rhs.key;
+            }
+            bool operator!=(const const_iterator& rhs) const {
+                return pos != rhs.pos || key != rhs.key;
+            }
+
+        };
+
+        vector() { head = (T*)operator new[](ssize); }
+        vector(const vector& other) {
+            ssize = other.ssize;
+            csize = other.csize;
+            delete[] head;
+            head = (T*)operator new[](ssize);
+            for (size_t i = 0; i < csize; ++i) { new(head + i) T(other.head[i]); }
+        }
+        ~vector() {
+            for (size_t i = 0; i < csize; ++i)  head[i].~T();
+            delete[]head;
+        }
+        vector& operator=(const vector& other) {
+            if (head == other.head) return *this;
+
+            if (head)
+            {
+                for (size_t i = 0; i < csize; ++i) head[i].~T();
+                delete[]head;
+            }
+            ssize = other.ssize;
+            csize = other.csize;
+            head = (T*)operator new[](ssize);
+            for (size_t i = 0; i < csize; ++i) { new(head + i) T(other.head[i]); }
+            return *this;
+        }
+
+        T& at(const size_t& pos) {
+            if (pos < 0 || pos >= ssize) throw index_out_of_bound();
+            return head[pos];
+        }
+
+        const T& at(const size_t& pos) const {
+            if (pos < 0 || pos >= ssize) throw index_out_of_bound();
+            return head[pos];
+        }
+
+        T& operator[](const size_t& pos) {
+            return at(pos);
+        }
+        const T& operator[](const size_t& pos) const {
+            return at(pos);
+        }
+
+        const T& front() const {
+            if (ssize == 0) throw container_is_empty();
+            else return head[0];
+        }
+
+        const T& back() const {
+            if (ssize == 0) throw container_is_empty();
+            else return head[csize - 1];
+        }
+
+        iterator begin() {
+            return iterator(this , 0);
+        }
+        const_iterator cbegin() const {
+            return const_iterator(this , 0);
+        }
+
+        iterator end() {
+            return iterator(this , csize);
+        }
+        const_iterator cend() const {
+            return const_iterator(this,csize);
+        }
+
+        bool empty() const {
+            if (csize == 0)return true;
+            else return false;
+        }
+
+        size_t size() const {
+            return csize;
+        }
+
+        void clear() {
+            for (size_t i = 0; i < csize; ++i) head[i].~T();
+            delete[]head;
+            csize = 0;
+            head = (T*)operator new[](ssize);
+        }
+
+        iterator insert(iterator pos, const T& value) {
+            return this->insert(pos - head, value);
+        }
+
+        iterator insert(const size_t& ind, const T& value) {
+            if (ind < 0 || ind >= csize) throw index_out_of_bound();
+
+            if (csize + 1 >= ssize) doublespace();
+            new(head + csize)T;
+            for (size_t i = csize; i >ind; --i)
+            {
+                head[i] = head[i - 1];
+            }
+            head[ind] = value;
+            csize++;
+            return iterator(this , ind);
+        }
+
+        iterator erase(iterator pos) {
+            size_t mark = pos - head;
+            return this->erase(mark);
+        }
+
+        iterator erase(const size_t& ind) {
+            if (ind < 0 || ind >= csize) throw index_out_of_bound();
+            csize--;
+            for (size_t i = ind; i < csize; ++i)
+            {
+                head[i] = head[i + 1];
+            }
+            return iterator(this , ind);
+        }
+
+        void push_back(const T& value) {
+            if (csize >= ssize) doublespace();
+            new (head + csize)T(value);
+            csize++;
+        }
+
+        void pop_back() {
+            if (csize == 0) throw container_is_empty();
+            else csize--;
+            head[csize].~T();
+        }
+    };
+}
+
+#endif
